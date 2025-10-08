@@ -1,18 +1,52 @@
 import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-if (!supabaseUrl || !supabaseAnonKey) {
+// Allow development with placeholder values
+const isDevelopment = process.env.NODE_ENV === 'development';
+const usingPlaceholders = supabaseUrl?.includes('your-supabase-url') || !supabaseUrl;
+
+if (!isDevelopment && (!supabaseUrl || !supabaseAnonKey)) {
   throw new Error("Missing Supabase environment variables");
 }
 
+// Create mock client for development with placeholders
+const createMockClient = () => ({
+  auth: {
+    getSession: () => Promise.resolve({ data: { session: null }, error: null }),
+    signInWithPassword: () => Promise.resolve({ data: { user: null }, error: new Error("Not configured") }),
+    signUp: () => Promise.resolve({ data: { user: null }, error: new Error("Not configured") }),
+    signOut: () => Promise.resolve({ error: null }),
+    onAuthStateChange: (callback: Function) => {
+      // Immediately call with null session for development
+      callback('SIGNED_OUT', null);
+      // Return unsubscribe function in the expected format
+      return {
+        data: { subscription: { unsubscribe: () => {} } },
+        subscription: { unsubscribe: () => {} }
+      };
+    },
+    getCurrentUser: () => Promise.resolve({ data: { user: null }, error: null }),
+    updateUser: () => Promise.resolve({ data: { user: null }, error: new Error("Not configured") }),
+    refreshSession: () => Promise.resolve({ data: { session: null }, error: null })
+  },
+  from: () => ({
+    select: () => ({
+      eq: () => ({
+        data: [],
+        error: new Error("Not configured")
+      })
+    })
+  })
+});
+
 // Client for use in browser/components
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = usingPlaceholders ? createMockClient() : createClient(supabaseUrl!, supabaseAnonKey!);
 
 // Admin client for use in server-side code (API routes)
-export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey, {
+export const supabaseAdmin = usingPlaceholders ? createMockClient() : createClient(supabaseUrl!, supabaseServiceRoleKey!, {
   auth: {
     autoRefreshToken: false,
     persistSession: false,
