@@ -67,6 +67,9 @@ A marketer has a "Booking Funnel" set up to schedule consultation calls. They wa
 ### Session 2025-10-07
 
 - Q: What is your preferred git workflow for feature branches and PR creation process? → A: Feature branch → Squash merge to main → Delete feature branch
+- Q: Multi-tenant n8n architecture approach for workflow isolation between users? → A: Namespace/project isolation with complete separation of workflows, credentials, and execution history
+- Q: Error handling and recovery approach for failed n8n workflows? → A: Auto-retry with escalation - 3 attempts with exponential backoff (1min, 5min, 15min), then notify user
+- Q: Component customization scope for users editing funnel templates? → A: Block-based editing with AI agent for larger changes while preventing container-level breaks
 
 ## Requirements *(mandatory)*
 
@@ -74,7 +77,8 @@ A marketer has a "Booking Funnel" set up to schedule consultation calls. They wa
 
 - **FR-001**: System MUST provide a visual, drag-and-drop editor for users to build and customize funnel pages.
 - **FR-002**: System MUST provide a selection of pre-built funnel templates (Lead Magnet, Webinar, Sales, Booking).
-- **FR-003**: System MUST offer a library of marketing-optimized components, including hero sections, video embeds, opt-in forms, testimonials, countdown timers, and payment buttons.
+- **FR-003**: System MUST offer a library of marketing-optimized components, including hero sections, video embeds, opt-in forms, testimonials, countdown timers, and payment buttons. Users can make block-level changes to templates while maintaining responsive behavior.
+- **FR-013**: System MUST provide an AI agent to assist users with larger template modifications while preventing breaking changes to container-level page structure.
 - **FR-004**: All components MUST be mobile-responsive and render correctly on common screen sizes.
 - **FR-005**: All components and pages MUST meet WCAG 2.1 AA accessibility standards.
 - **FR-006**: Users MUST be able to connect form submissions and button clicks to trigger n8n workflows.
@@ -82,7 +86,8 @@ A marketer has a "Booking Funnel" set up to schedule consultation calls. They wa
 - **FR-008**: System MUST provide pre-built n8n workflow templates for common integrations (e.g., adding a lead to a CRM, processing a payment).
 - **FR-009**: System MUST support integrations with Mailchimp, ConvertKit, ActiveCampaign, HubSpot, Pipedrive, Stripe, and PayPal.
 - **FR-010**: System MUST provide clear status visibility for workflow executions, including successes, failures, and error details.
-- **FR-011**: System MUST ensure that workflows for different users (tenants) are logically isolated from one another. Users will share a multi-tenant n8n instance, but can only see and manage their own workflows, credentials, and execution data.
+- **FR-012**: System MUST automatically retry failed workflows up to 3 times with exponential backoff (1 minute, 5 minutes, 15 minutes) before notifying the user of persistent failures.
+- **FR-011**: System MUST ensure that workflows for different users (tenants) are isolated using n8n project namespaces. Each user gets a dedicated namespace with complete separation of workflows, credentials, and execution history. Users can only see and manage their own namespace resources.
 
 ### Key Entities *(include if feature involves data)*
 
