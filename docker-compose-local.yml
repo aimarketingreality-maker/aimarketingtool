@@ -1,0 +1,207 @@
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:15
+    container_name: supabase_db_local
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - db_data:/var/lib/postgresql/data
+      - ./db/postgresql.conf:/etc/postgresql/postgresql.conf
+    ports:
+      - "54322:5432"
+    command:
+      - postgres
+      - -c
+      - config_file=/etc/postgresql/postgresql.conf
+      - -c
+      - log_min_messages=fatal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  # Supabase Studio (Dashboard)
+  studio:
+    image: supabase/studio:20240408-a5d5ea69
+    container_name: supabase_studio_local
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SUPABASE_URL: http://kong:8000
+      SUPABASE_REST_URL: http://kong:8000/rest/v1/
+      SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0
+      SUPABASE_SERVICE_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU
+    ports:
+      - "54323:3000"
+    restart: unless-stopped
+
+  # Kong API Gateway
+  kong:
+    image: kong:3.4
+    container_name: supabase_kong_local
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      KONG_DATABASE: "off"
+      KONG_DECLARATIVE_CONFIG: /home/kong/declarative/kong.yml
+      KONG_PROXY_ACCESS_LOG: /dev/stdout
+      KONG_ADMIN_ACCESS_LOG: /dev/stdout
+      KONG_PROXY_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_LISTEN: 0.0.0.0:8001
+      KONG_ADMIN_GUI_URL: http://localhost:8002
+    volumes:
+      - ./kong/declarative:/home/kong/declarative
+    ports:
+      - "54321:8000"
+      - "54325:8001"
+    healthcheck:
+      test: ["CMD", "kong", "health"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  # Auth Service
+  auth:
+    image: supabase/gotrue:v2.143.0
+    container_name: supabase_auth_local
+    depends_on:
+      db:
+        condition: service_healthy
+      kong:
+        condition: service_healthy
+    environment:
+      GOTRUE_API_HOST: 0.0.0.0
+      GOTRUE_API_PORT: 9999
+      GOTRUE_DB_DRIVER: postgres
+      GOTRUE_DB_DATABASE_URL: postgresql://postgres:postgres@db:5432/postgres
+      GOTRUE_SITE_URL: http://localhost:3003
+      GOTRUE_URI_ALLOW_LIST: "*"
+      GOTRUE_DISABLE_SIGNUP: false
+      GOTRUE_JWT_SECRET: your-super-secret-jwt-token-with-at-least-32-characters-long
+      GOTRUE_JWT_EXP: 3600
+      GOTRUE_JWT_DEFAULT_GROUP_NAME_ROLE: authenticated
+      GOTRUE_MAILER_AUTOCONFIRM: true
+      GOTRUE_EXTERNAL_EMAIL_ENABLED: true
+      GOTRUE_SMTP_ADMIN_EMAIL: admin@example.com
+      GOTRUE_SMTP_HOST: inbucket
+      GOTRUE_SMTP_PORT: 2500
+      GOTRUE_SMTP_USER: ""
+      GOTRUE_SMTP_PASS: ""
+      GOTRUE_SMTP_SENDER_NAME: ""
+      GOTRUE_MAILER_URLPATHS_CONFIRMATION: /auth/v1/verify
+      GOTRUE_MAILER_URLPATHS_RECOVERY: /auth/v1/recover
+      GOTRUE_MAILER_URLPATHS_EMAIL_CHANGE: /auth/v1/email-change
+      GOTRUE_RATE_LIMIT_EMAIL_SENT: 10
+      GOTRUE_EXTERNAL_GOOGLE_ENABLED: false
+      GOTRUE_EXTERNAL_GITHUB_ENABLED: false
+      GOTRUE_EXTERNAL_BITBUCKET_ENABLED: false
+      GOTRUE_EXTERNAL_APPLE_ENABLED: false
+      GOTRUE_EXTERNAL_FACEBOOK_ENABLED: false
+    ports:
+      - "54324:9999"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9999/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  # REST API
+  rest:
+    image: postgrest/postgrest:v12.0.4
+    container_name: supabase_rest_local
+    depends_on:
+      db:
+        condition: service_healthy
+      auth:
+        condition: service_healthy
+    environment:
+      PGRST_DB_URI: postgresql://postgres:postgres@db:5432/postgres
+      PGRST_DB_SCHEMAS: public
+      PGRST_DB_ANON_ROLE: anon
+      PGRST_JWT_SECRET: your-super-secret-jwt-token-with-at-least-32-characters-long
+      PGRST_DB_USE_LEGACY_GUCS: "false"
+      PGRST_SERVER_TRACE_HEADER: x-request-id
+      PGRST_APP_SETTINGS_JWT_SECRET: your-super-secret-jwt-token-with-at-least-32-characters-long
+      PGRST_APP_SETTINGS_JWT_EXP: 3600
+    ports:
+      - "54326:3000"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  # Realtime Service
+  realtime:
+    image: supabase/realtime:v2.21.24
+    container_name: supabase_realtime_local
+    depends_on:
+      db:
+        condition: service_healthy
+      kong:
+        condition: service_healthy
+    environment:
+      PORT: 4000
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: postgres
+      DB_AFTER_CONNECT_QUERY: 'SET search_path TO _realtime'
+      DB_ENC_KEY: supabaserealtime
+      API_JWT_SECRET: your-super-secret-jwt-token-with-at-least-32-characters-long
+      SECRET_KEY_BASE: UpNVntn3cDxHJpqfqYdLnpI3xVtMfZh0NcPfQyHGqvdv7XeHjO5RNRuyFwQJ8lT
+      FLY_ALLOC_ID: fly123
+      FLY_APP_NAME: realtime
+      FLY_IMAGE_REF: image123
+      FLY_REGION: iad
+      ENABLE_TAILSCALE: "false"
+      LOG_LEVEL: info
+    ports:
+      - "54327:4000"
+    healthcheck:
+      test: ["CMD", "curl", "http://localhost:4000/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  # Mail Testing Service
+  inbucket:
+    image: inbucket/inbucket:3.0.0
+    container_name: supabase_inbucket_local
+    environment:
+      INBUCKET_SMTP_ADDR: :2500
+      INBUCKET_POP3_ADDR: :1100
+      INBUCKET_UI_ADDR: :9000
+      INBUCKET_WEB_ADDR: :9000
+    ports:
+      - "54330:2500"
+      - "54331:1100"
+      - "54332:9000"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9000/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+networks:
+  default:
+    name: supabase_local_network
+
+volumes:
+  db_data:
+    driver: local
