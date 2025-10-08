@@ -4,54 +4,26 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-// Allow development with placeholder values
-const isDevelopment = process.env.NODE_ENV === 'development';
-const usingPlaceholders = supabaseUrl?.includes('your-supabase-url') || !supabaseUrl;
-
-if (!isDevelopment && (!supabaseUrl || !supabaseAnonKey)) {
-  throw new Error("Missing Supabase environment variables");
+// Validate required environment variables
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error("Missing Supabase environment variables. Please check your .env.local file.");
 }
 
-// Create mock client for development with placeholders
-const createMockClient = () => ({
-  auth: {
-    getSession: () => Promise.resolve({ data: { session: null }, error: null }),
-    signInWithPassword: () => Promise.resolve({ data: { user: null }, error: new Error("Not configured") }),
-    signUp: () => Promise.resolve({ data: { user: null }, error: new Error("Not configured") }),
-    signOut: () => Promise.resolve({ error: null }),
-    onAuthStateChange: (callback: Function) => {
-      // Immediately call with null session for development
-      callback('SIGNED_OUT', null);
-      // Return unsubscribe function in the expected format
-      return {
-        data: { subscription: { unsubscribe: () => {} } },
-        subscription: { unsubscribe: () => {} }
-      };
-    },
-    getCurrentUser: () => Promise.resolve({ data: { user: null }, error: null }),
-    updateUser: () => Promise.resolve({ data: { user: null }, error: new Error("Not configured") }),
-    refreshSession: () => Promise.resolve({ data: { session: null }, error: null })
-  },
-  from: () => ({
-    select: () => ({
-      eq: () => ({
-        data: [],
-        error: new Error("Not configured")
-      })
-    })
-  })
-});
+// Service role key validation only for server-side code
+if (typeof window === 'undefined' && !supabaseServiceRoleKey) {
+  console.warn("Missing Supabase service role key. Some server-side operations may not work.");
+}
 
 // Client for use in browser/components
-export const supabase = usingPlaceholders ? createMockClient() : createClient(supabaseUrl!, supabaseAnonKey!);
+export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);
 
 // Admin client for use in server-side code (API routes)
-export const supabaseAdmin = usingPlaceholders ? createMockClient() : createClient(supabaseUrl!, supabaseServiceRoleKey!, {
+export const supabaseAdmin = supabaseServiceRoleKey ? createClient<Database>(supabaseUrl, supabaseServiceRoleKey, {
   auth: {
     autoRefreshToken: false,
     persistSession: false,
   },
-});
+}) : supabase;
 
 // Database types based on our schema
 export interface Database {
@@ -83,6 +55,7 @@ export interface Database {
           user_id: string;
           name: string;
           published: boolean;
+          slug: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -91,6 +64,7 @@ export interface Database {
           user_id: string;
           name: string;
           published?: boolean;
+          slug?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -99,6 +73,7 @@ export interface Database {
           user_id?: string;
           name?: string;
           published?: boolean;
+          slug?: string | null;
           created_at?: string;
           updated_at?: string;
         };

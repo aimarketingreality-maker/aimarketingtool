@@ -46,12 +46,13 @@ async function authenticateAndValidate(request: NextRequest, funnelId: string) {
 // GET /api/funnels/{funnelId}/pages - List pages for a specific funnel
 export async function GET(
   request: NextRequest,
-  { params }: { params: { funnelId: string } }
+  { params }: { params: Promise<{ funnelId: string }> }
 ) {
   try {
+    const { funnelId } = await params;
     const { error: authError, user, funnel } = await authenticateAndValidate(
       request,
-      params.funnelId
+      funnelId
     );
 
     if (authError || !user || !funnel) {
@@ -74,7 +75,7 @@ export async function GET(
           created_at
         )
       `)
-      .eq("funnel_id", params.funnelId)
+      .eq("funnel_id", funnelId)
       .order("created_at", { ascending: true });
 
     if (error) {
@@ -113,12 +114,13 @@ export async function GET(
 // POST /api/funnels/{funnelId}/pages - Create a new page in a funnel
 export async function POST(
   request: NextRequest,
-  { params }: { params: { funnelId: string } }
+  { params }: { params: Promise<{ funnelId: string }> }
 ) {
   try {
+    const { funnelId } = await params;
     const { error: authError, user, funnel } = await authenticateAndValidate(
       request,
-      params.funnelId
+      funnelId
     );
 
     if (authError || !user || !funnel) {
@@ -150,7 +152,7 @@ export async function POST(
     const { data: existingPage } = await supabaseAdmin
       .from("pages")
       .select("id")
-      .eq("funnel_id", params.funnelId)
+      .eq("funnel_id", funnelId)
       .eq("slug", slug)
       .single();
 
@@ -165,7 +167,7 @@ export async function POST(
     const { data: page, error } = await supabaseAdmin
       .from("pages")
       .insert({
-        funnel_id: params.funnelId,
+        funnel_id: funnelId,
         name,
         slug,
       })

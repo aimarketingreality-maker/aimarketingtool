@@ -123,6 +123,28 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Ensure user exists in public.users table
+    const { error: userSyncError } = await supabaseAdmin
+      .from("users")
+      .upsert(
+        {
+          id: user.id,
+          email: user.email!,
+        },
+        {
+          onConflict: "id",
+          ignoreDuplicates: false,
+        }
+      );
+
+    if (userSyncError) {
+      console.error("Error syncing user:", userSyncError);
+      return NextResponse.json(
+        { error: "Failed to sync user data" },
+        { status: 500 }
+      );
+    }
+
     // Create funnel
     const { data: funnel, error } = await supabaseAdmin
       .from("funnels")
