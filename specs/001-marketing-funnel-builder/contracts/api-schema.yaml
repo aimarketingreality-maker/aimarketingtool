@@ -1,0 +1,1975 @@
+openapi: 3.0.3
+info:
+  title: AI Marketing Tool - Funnel Builder API
+  description: RESTful API for marketing funnel builder with n8n workflow integration
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: support@example.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: https://api.example.com/v1
+    description: Production server
+  - url: https://staging-api.example.com/v1
+    description: Staging server
+
+security:
+  - BearerAuth: []
+
+paths:
+  # Workspace Management
+  /workspaces:
+    get:
+      summary: List user workspaces
+      description: Retrieve all workspaces the current user has access to
+      tags:
+        - Workspaces
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Workspace'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+    post:
+      summary: Create new workspace
+      description: Create a new workspace for the current user
+      tags:
+        - Workspaces
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - slug
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 255
+                slug:
+                  type: string
+                  pattern: '^[a-z0-9-]+$'
+                  minLength: 1
+                  maxLength: 100
+                description:
+                  type: string
+                  maxLength: 500
+      responses:
+        '201':
+          description: Workspace created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Workspace'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          description: Workspace slug already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /workspaces/{workspaceId}:
+    get:
+      summary: Get workspace details
+      description: Retrieve detailed information about a specific workspace
+      tags:
+        - Workspaces
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Workspace'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+    put:
+      summary: Update workspace
+      description: Update workspace information
+      tags:
+        - Workspaces
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 255
+                description:
+                  type: string
+                  maxLength: 500
+                settings:
+                  type: object
+      responses:
+        '200':
+          description: Workspace updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Workspace'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # Funnel Management
+  /workspaces/{workspaceId}/funnels:
+    get:
+      summary: List workspace funnels
+      description: Retrieve all funnels in a workspace
+      tags:
+        - Funnels
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [draft, published, archived]
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Funnel'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    post:
+      summary: Create new funnel
+      description: Create a new funnel in the workspace
+      tags:
+        - Funnels
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - slug
+                - templateId
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 255
+                slug:
+                  type: string
+                  pattern: '^[a-z0-9-]+$'
+                  minLength: 1
+                  maxLength: 100
+                description:
+                  type: string
+                  maxLength: 1000
+                templateId:
+                  type: string
+                  format: uuid
+                domain:
+                  type: string
+                  maxLength: 255
+                path:
+                  type: string
+                  pattern: '^[a-z0-9-]+$'
+                  minLength: 1
+                  maxLength: 100
+                seoConfig:
+                  $ref: '#/components/schemas/SEOConfig'
+                settings:
+                  type: object
+      responses:
+        '201':
+          description: Funnel created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Funnel'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Funnel slug already exists in workspace
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /workspaces/{workspaceId}/funnels/{funnelId}:
+    get:
+      summary: Get funnel details
+      description: Retrieve detailed funnel information with pages and components
+      tags:
+        - Funnels
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: funnelId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FunnelDetail'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      summary: Update funnel
+      description: Update funnel information and settings
+      tags:
+        - Funnels
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: funnelId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 255
+                description:
+                  type: string
+                  maxLength: 1000
+                status:
+                  type: string
+                  enum: [draft, published, archived]
+                domain:
+                  type: string
+                  maxLength: 255
+                seoConfig:
+                  $ref: '#/components/schemas/SEOConfig'
+                settings:
+                  type: object
+      responses:
+        '200':
+          description: Funnel updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Funnel'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      summary: Delete funnel
+      description: Delete a funnel and all its pages and components
+      tags:
+        - Funnels
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: funnelId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Funnel deleted successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /workspaces/{workspaceId}/funnels/{funnelId}/publish:
+    post:
+      summary: Publish funnel
+      description: Publish a funnel to make it live
+      tags:
+        - Funnels
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: funnelId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Funnel published successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Funnel'
+        '400':
+          description: Funnel cannot be published (missing required components, workflows, etc.)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # Page Management
+  /workspaces/{workspaceId}/funnels/{funnelId}/pages:
+    get:
+      summary: List funnel pages
+      description: Retrieve all pages in a funnel
+      tags:
+        - Pages
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: funnelId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Page'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    post:
+      summary: Create new page
+      description: Create a new page in the funnel
+      tags:
+        - Pages
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: funnelId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - slug
+                - pageType
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 255
+                slug:
+                  type: string
+                  pattern: '^[a-z0-9-]+$'
+                  minLength: 1
+                  maxLength: 100
+                path:
+                  type: string
+                  pattern: '^[a-z0-9-]+$'
+                  minLength: 1
+                  maxLength: 100
+                pageType:
+                  type: string
+                  enum: [landing, optin, sales, checkout, thankyou, booking]
+                orderIndex:
+                  type: integer
+                  minimum: 0
+                seoConfig:
+                  $ref: '#/components/schemas/SEOConfig'
+                customCss:
+                  type: string
+                  maxLength: 10000
+                customJs:
+                  type: string
+                  maxLength: 10000
+      responses:
+        '201':
+          description: Page created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Page'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Page slug already exists in funnel
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /workspaces/{workspaceId}/funnels/{funnelId}/pages/{pageId}:
+    get:
+      summary: Get page details
+      description: Retrieve detailed page information with components
+      tags:
+        - Pages
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: funnelId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: pageId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PageDetail'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      summary: Update page
+      description: Update page information and settings
+      tags:
+        - Pages
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: funnelId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: pageId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 255
+                path:
+                  type: string
+                  pattern: '^[a-z0-9-]+$'
+                  minLength: 1
+                  maxLength: 100
+                seoConfig:
+                  $ref: '#/components/schemas/SEOConfig'
+                customCss:
+                  type: string
+                  maxLength: 10000
+                customJs:
+                  type: string
+                  maxLength: 10000
+      responses:
+        '200':
+          description: Page updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Page'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      summary: Delete page
+      description: Delete a page and all its components
+      tags:
+        - Pages
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: funnelId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: pageId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Page deleted successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # Component Management
+  /workspaces/{workspaceId}/funnels/{funnelId}/pages/{pageId}/components:
+    get:
+      summary: List page components
+      description: Retrieve all components on a page, ordered by position
+      tags:
+        - Components
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: funnelId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: pageId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Component'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    post:
+      summary: Add component to page
+      description: Add a new component to the page
+      tags:
+        - Components
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: funnelId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: pageId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - type
+                - config
+              properties:
+                type:
+                  type: string
+                  enum: [hero, optin-form, testimonials, countdown-timer, payment-button, video-embed, guarantee, social-proof, pricing, features-grid]
+                orderIndex:
+                  type: integer
+                  minimum: 0
+                config:
+                  type: object
+                  description: Component-specific configuration
+                responsiveConfig:
+                  type: object
+                  description: Mobile/tablet responsive overrides
+                customCss:
+                  type: string
+                  maxLength: 5000
+                isVisible:
+                  type: boolean
+                  default: true
+      responses:
+        '201':
+          description: Component added successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Component'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /workspaces/{workspaceId}/funnels/{funnelId}/pages/{pageId}/components/{componentId}:
+    get:
+      summary: Get component details
+      description: Retrieve detailed component information
+      tags:
+        - Components
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: funnelId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: pageId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: componentId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Component'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      summary: Update component
+      description: Update component configuration and position
+      tags:
+        - Components
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: funnelId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: pageId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: componentId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                orderIndex:
+                  type: integer
+                  minimum: 0
+                config:
+                  type: object
+                responsiveConfig:
+                  type: object
+                customCss:
+                  type: string
+                  maxLength: 5000
+                isVisible:
+                  type: boolean
+      responses:
+        '200':
+          description: Component updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Component'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      summary: Delete component
+      description: Remove a component from the page
+      tags:
+        - Components
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: funnelId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: pageId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: componentId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Component deleted successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # Template Management
+  /templates:
+    get:
+      summary: List available templates
+      description: Retrieve all available funnel templates
+      tags:
+        - Templates
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+            enum: [lead-magnet, sales, webinar, booking]
+        - name: isPublic
+          in: query
+          schema:
+            type: boolean
+            default: true
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Template'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /templates/{templateId}:
+    get:
+      summary: Get template details
+      description: Retrieve detailed template information with funnel structure
+      tags:
+        - Templates
+      parameters:
+        - name: templateId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TemplateDetail'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  # Workflow Management
+  /workspaces/{workspaceId}/workflows:
+    get:
+      summary: List workspace workflows
+      description: Retrieve all n8n workflows in a workspace
+      tags:
+        - Workflows
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: category
+          in: query
+          schema:
+            type: string
+            enum: [lead-capture, payment, notification, automation]
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [draft, active, inactive, error]
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Workflow'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    post:
+      summary: Create new workflow
+      description: Create a new n8n workflow in the workspace
+      tags:
+        - Workflows
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - config
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 255
+                description:
+                  type: string
+                  maxLength: 1000
+                category:
+                  type: string
+                  enum: [lead-capture, payment, notification, automation]
+                funnelId:
+                  type: string
+                  format: uuid
+                templateId:
+                  type: string
+                  format: uuid
+                config:
+                  type: object
+                  description: n8n workflow definition
+                triggerConfig:
+                  type: object
+                  description: What triggers this workflow
+      responses:
+        '201':
+          description: Workflow created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Workflow'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /workspaces/{workspaceId}/workflows/{workflowId}:
+    get:
+      summary: Get workflow details
+      description: Retrieve detailed workflow information
+      tags:
+        - Workflows
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: workflowId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Workflow'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      summary: Update workflow
+      description: Update workflow configuration and settings
+      tags:
+        - Workflows
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: workflowId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 255
+                description:
+                  type: string
+                  maxLength: 1000
+                status:
+                  type: string
+                  enum: [draft, active, inactive, error]
+                config:
+                  type: object
+                triggerConfig:
+                  type: object
+      responses:
+        '200':
+          description: Workflow updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Workflow'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      summary: Delete workflow
+      description: Delete a workflow from the workspace
+      tags:
+        - Workflows
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: workflowId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Workflow deleted successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /workflows/{workflowId}/execute:
+    post:
+      summary: Execute workflow
+      description: Trigger a workflow execution with provided data
+      tags:
+        - Workflows
+      parameters:
+        - name: workflowId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                triggerData:
+                  type: object
+                  description: Data to trigger the workflow
+                options:
+                  type: object
+                  properties:
+                    waitForCompletion:
+                      type: boolean
+                      default: false
+                    timeout:
+                      type: integer
+                      default: 30000
+      responses:
+        '200':
+          description: Workflow execution started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowExecution'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # Credential Management
+  /workspaces/{workspaceId}/credentials:
+    get:
+      summary: List workspace credentials
+      description: Retrieve all integration credentials in a workspace
+      tags:
+        - Credentials
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [mailchimp, convertkit, activecampaign, hubspot, pipedrive, stripe, paypal]
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Credential'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    post:
+      summary: Create new credential
+      description: Store encrypted integration credentials
+      tags:
+        - Credentials
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - type
+                - data
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 255
+                type:
+                  type: string
+                  enum: [mailchimp, convertkit, activecampaign, hubspot, pipedrive, stripe, paypal]
+                data:
+                  type: object
+                  description: Credential data (will be encrypted)
+                  additionalProperties: true
+      responses:
+        '201':
+          description: Credential created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Credential'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Credential with same name and type already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # Analytics
+  /workspaces/{workspaceId}/funnels/{funnelId}/analytics:
+    get:
+      summary: Get funnel analytics
+      description: Retrieve performance analytics for a funnel
+      tags:
+        - Analytics
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: funnelId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: startDate
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: endDate
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: granularity
+          in: query
+          schema:
+            type: string
+            enum: [day, week, month]
+            default: day
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  summary:
+                    $ref: '#/components/schemas/FunnelAnalyticsSummary'
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/FunnelAnalytics'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Workspace:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        slug:
+          type: string
+        description:
+          type: string
+        owner:
+          $ref: '#/components/schemas/User'
+        billingPlan:
+          type: string
+          enum: [starter, professional, enterprise]
+        billingStatus:
+          type: string
+          enum: [active, trial, past_due, cancelled]
+        n8nNamespace:
+          type: string
+        settings:
+          type: object
+        memberCount:
+          type: integer
+        funnelCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        emailVerified:
+          type: boolean
+        firstName:
+          type: string
+        lastName:
+          type: string
+        avatarUrl:
+          type: string
+        timezone:
+          type: string
+        language:
+          type: string
+        lastLoginAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+
+    Funnel:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        workspaceId:
+          type: string
+          format: uuid
+        templateId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        slug:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+          enum: [draft, published, archived]
+        publishedAt:
+          type: string
+          format: date-time
+        domain:
+          type: string
+        path:
+          type: string
+        url:
+          type: string
+          format: uri
+        seoConfig:
+          $ref: '#/components/schemas/SEOConfig'
+        settings:
+          type: object
+        analytics:
+          type: object
+        createdBy:
+          $ref: '#/components/schemas/User'
+        pageCount:
+          type: integer
+        componentCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    FunnelDetail:
+      allOf:
+        - $ref: '#/components/schemas/Funnel'
+        - type: object
+          properties:
+            pages:
+              type: array
+              items:
+                $ref: '#/components/schemas/PageDetail'
+            workflows:
+              type: array
+              items:
+                $ref: '#/components/schemas/Workflow'
+
+    Page:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        funnelId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        slug:
+          type: string
+        path:
+          type: string
+        url:
+          type: string
+          format: uri
+        pageType:
+          type: string
+          enum: [landing, optin, sales, checkout, thankyou, booking]
+        orderIndex:
+          type: integer
+        seoConfig:
+          $ref: '#/components/schemas/SEOConfig'
+        customCss:
+          type: string
+        customJs:
+          type: string
+        isPublished:
+          type: boolean
+        publishedAt:
+          type: string
+          format: date-time
+        componentCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    PageDetail:
+      allOf:
+        - $ref: '#/components/schemas/Page'
+        - type: object
+          properties:
+            components:
+              type: array
+              items:
+                $ref: '#/components/schemas/Component'
+
+    Component:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        pageId:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: [hero, optin-form, testimonials, countdown-timer, payment-button, video-embed, guarantee, social-proof, pricing, features-grid]
+        orderIndex:
+          type: integer
+        config:
+          type: object
+        responsiveConfig:
+          type: object
+        customCss:
+          type: string
+        isVisible:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Template:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        slug:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+          enum: [lead-magnet, sales, webinar, booking]
+        version:
+          type: string
+        status:
+          type: string
+          enum: [active, deprecated, archived]
+        isPublic:
+          type: boolean
+        author:
+          $ref: '#/components/schemas/User'
+        previewImage:
+          type: string
+          format: uri
+        demoUrl:
+          type: string
+          format: uri
+        conversionRate:
+          type: number
+          format: decimal
+        tags:
+          type: array
+          items:
+            type: string
+        compatibility:
+          type: object
+        pageCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    TemplateDetail:
+      allOf:
+        - $ref: '#/components/schemas/Template'
+        - type: object
+          properties:
+            config:
+              type: object
+              description: Complete template definition with pages and components
+
+    Workflow:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        workspaceId:
+          type: string
+          format: uuid
+        funnelId:
+          type: string
+          format: uuid
+        n8nWorkflowId:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+          enum: [lead-capture, payment, notification, automation]
+        status:
+          type: string
+          enum: [draft, active, inactive, error]
+        config:
+          type: object
+        templateId:
+          type: string
+          format: uuid
+        triggerConfig:
+          type: object
+        createdBy:
+          $ref: '#/components/schemas/User'
+        executionCount:
+          type: integer
+        lastExecutedAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    WorkflowExecution:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        workflowId:
+          type: string
+          format: uuid
+        n8nExecutionId:
+          type: string
+        status:
+          type: string
+          enum: [running, success, error, cancelled]
+        triggerData:
+          type: object
+        resultData:
+          type: object
+        errorMessage:
+          type: string
+        startedAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+        durationMs:
+          type: integer
+        retryCount:
+          type: integer
+
+    Credential:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        workspaceId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        type:
+          type: string
+          enum: [mailchimp, convertkit, activecampaign, hubspot, pipedrive, stripe, paypal]
+        isActive:
+          type: boolean
+        lastUsedAt:
+          type: string
+          format: date-time
+        createdBy:
+          $ref: '#/components/schemas/User'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        # Note: Encrypted data is not returned in API responses
+
+    SEOConfig:
+      type: object
+      properties:
+        title:
+          type: string
+          maxLength: 60
+        description:
+          type: string
+          maxLength: 160
+        keywords:
+          type: array
+          items:
+            type: string
+        ogImage:
+          type: string
+          format: uri
+        canonicalUrl:
+          type: string
+          format: uri
+        noindex:
+          type: boolean
+          default: false
+        structuredData:
+          type: object
+
+    FunnelAnalytics:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+        pageId:
+          type: string
+          format: uuid
+        pageSlug:
+          type: string
+        visitors:
+          type: integer
+        uniqueVisitors:
+          type: integer
+        conversions:
+          type: integer
+        conversionRate:
+          type: number
+          format: decimal
+        bounceRate:
+          type: number
+          format: decimal
+        avgTimeOnPage:
+          type: integer
+          description: Average time in seconds
+
+    FunnelAnalyticsSummary:
+      type: object
+      properties:
+        totalVisitors:
+          type: integer
+        totalConversions:
+          type: integer
+        overallConversionRate:
+          type: number
+          format: decimal
+        avgTimeOnPage:
+          type: integer
+        bounceRate:
+          type: number
+          format: decimal
+        topPerformingPage:
+          type: object
+          properties:
+            pageId:
+              type: string
+              format: uuid
+            pageName:
+              type: string
+            conversionRate:
+              type: number
+              format: decimal
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer
+        totalPages:
+          type: integer
+        hasNext:
+          type: boolean
+        hasPrev:
+          type: boolean
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+        timestamp:
+          type: string
+          format: date-time
+
+  responses:
+    BadRequest:
+      description: Bad request - invalid input data
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    Unauthorized:
+      description: Unauthorized - authentication required
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: Unauthorized
+              message:
+                type: string
+                example: Authentication is required to access this resource
+              timestamp:
+                type: string
+                format: date-time
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: Not Found
+              message:
+                type: string
+                example: The requested resource was not found
+              timestamp:
+                type: string
+                format: date-time
+
+    ServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: Internal Server Error
+              message:
+                type: string
+                example: An unexpected error occurred
+              timestamp:
+                type: string
+                format: date-time
+
+tags:
+  - name: Workspaces
+    description: Workspace management operations
+  - name: Funnels
+    description: Funnel creation and management
+  - name: Pages
+    description: Page management within funnels
+  - name: Components
+    description: Component management on pages
+  - name: Templates
+    description: Template management and selection
+  - name: Workflows
+    description: n8n workflow management
+  - name: Credentials
+    description: Integration credential management
+  - name: Analytics
+    description: Funnel performance analytics

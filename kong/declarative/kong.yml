@@ -1,0 +1,102 @@
+_format_version: "1.1"
+
+consumers:
+  - username: anon
+    keyauth_credentials:
+      - key: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0
+  - username: service_role
+    keyauth_credentials:
+      - key: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU
+
+services:
+  - name: auth
+    url: http://auth:9999
+    plugins:
+      - name: cors
+      - name: request-transformer
+        config:
+          add:
+            headers:
+              - "Authorization:Bearer $(headers:authorization)"
+              - "apikey:$(headers:apikey)"
+              - "apikey:$(headers:Authorization)"
+
+  - name: rest
+    url: http://rest:3000/
+    plugins:
+      - name: cors
+      - name: key-auth
+      - name: jwt
+        config:
+          secret_is_base64: false
+      - name: post-function
+        config:
+          functions:
+            - "return kong.response.set_header('X-JWT-Iss', 'https://supabase.io')"
+
+  - name: realtime
+    url: http://realtime:4000/socket/
+    plugins:
+      - name: cors
+
+  - name: storage
+    url: http://storage:5000/
+    plugins:
+      - name: cors
+      - name: key-auth
+      - name: jwt
+        config:
+          secret_is_base64: false
+
+routes:
+  - name: auth_v1
+    service: auth
+    paths: ["/auth/v1/"]
+    methods: ["POST", "GET", "PUT", "DELETE", "OPTIONS"]
+    strip_path: false
+
+  - name: auth_v1_verify
+    service: auth
+    paths: ["/auth/v1/verify"]
+    methods: ["GET", "OPTIONS"]
+    strip_path: false
+
+  - name: rest_v1
+    service: rest
+    paths: ["/rest/v1/", "/rest/v1/rpc/", "/rest/v1/table/"]
+    methods: ["POST", "GET", "PUT", "DELETE", "OPTIONS", "PATCH"]
+    strip_path: false
+
+  - name: realtime
+    service: realtime
+    paths: ["/realtime/v1/"]
+    methods: ["GET", "OPTIONS", "POST", "PUT", "DELETE", "PATCH"]
+    strip_path: false
+
+  - name: storage_v1
+    service: storage
+    paths: ["/storage/v1/"]
+    methods: ["POST", "GET", "PUT", "DELETE", "OPTIONS", "PATCH"]
+    strip_path: false
+
+  - name: storage_v1_objects
+    service: storage
+    paths: ["/storage/v1/object/"]
+    methods: ["POST", "GET", "PUT", "DELETE", "OPTIONS", "PATCH"]
+    strip_path: false
+
+  - name: storage_v1_avatar
+    service: storage
+    paths: ["/storage/v1/avatar/"]
+    methods: ["POST", "GET", "PUT", "DELETE", "OPTIONS", "PATCH"]
+    strip_path: false
+
+plugins:
+  - name: cors
+    config:
+      origins: ["*"]
+      methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+      headers: ["Accept", "Authorization", "Content-Type", "apikey", "x-client-info", "x-supabase-auth-v4"]
+      credentials: true
+      max_age: 3600
+      preflight_continue: false

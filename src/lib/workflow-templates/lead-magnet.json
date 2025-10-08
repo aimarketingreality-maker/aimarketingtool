@@ -1,0 +1,745 @@
+{
+  "id": "lead-magnet-workflow",
+  "name": "Lead Magnet Funnel Workflow",
+  "description": "Complete lead magnet automation with email collection, validation, welcome sequence, and lead delivery. This workflow handles form submissions, adds contacts to your email list, sends welcome emails, and delivers lead magnets automatically.",
+  "category": "lead-magnet",
+  "version": "1.0.0",
+  "author": "AI Marketing Tool",
+  "tags": ["lead-magnet", "email-marketing", "automation", "lead-generation"],
+  "variables": [
+    {
+      "key": "emailProvider",
+      "label": "Email Provider",
+      "type": "string",
+      "required": true,
+      "defaultValue": "mailchimp",
+      "description": "Choose your email service provider for this funnel",
+      "validation": {
+        "options": ["mailchimp", "sendgrid", "convertkit"]
+      }
+    },
+    {
+      "key": "listId",
+      "label": "Email List ID",
+      "type": "string",
+      "required": true,
+      "description": "The ID of your email list where new leads will be added"
+    },
+    {
+      "key": "apiKey",
+      "label": "Email Service API Key",
+      "type": "string",
+      "required": true,
+      "description": "API key for your email service provider"
+    },
+    {
+      "key": "fromEmail",
+      "label": "From Email Address",
+      "type": "string",
+      "required": true,
+      "validation": {
+        "pattern": "^[^@]+@[^@]+\\.[^@]+$"
+      },
+      "description": "Email address that will appear as the sender"
+    },
+    {
+      "key": "fromName",
+      "label": "From Name",
+      "type": "string",
+      "required": true,
+      "defaultValue": "Your Company",
+      "description": "Display name that will appear in the from field of emails"
+    },
+    {
+      "key": "leadMagnetType",
+      "label": "Lead Magnet Type",
+      "type": "string",
+      "required": true,
+      "defaultValue": "pdf",
+      "description": "Type of lead magnet you're delivering",
+      "validation": {
+        "options": ["pdf", "video", "course", "template", "checklist", "ebook"]
+      }
+    },
+    {
+      "key": "leadMagnetUrl",
+      "label": "Lead Magnet URL",
+      "type": "string",
+      "required": true,
+      "description": "URL where the lead magnet file is hosted"
+    },
+    {
+      "key": "leadMagnetName",
+      "label": "Lead Magnet Name",
+      "type": "string",
+      "required": true,
+      "defaultValue": "Free Guide",
+      "description": "Name of the lead magnet as it will appear to users"
+    },
+    {
+      "key": "welcomeEmailSubject",
+      "label": "Welcome Email Subject",
+      "type": "string",
+      "required": true,
+      "defaultValue": "Your Free Guide is Ready!",
+      "description": "Subject line for the immediate welcome email"
+    },
+    {
+      "key": "welcomeEmailContent",
+      "label": "Welcome Email Content",
+      "type": "string",
+      "required": true,
+      "defaultValue": "Thank you for subscribing! Here is your free guide.",
+      "description": "Content for the immediate welcome email (supports HTML)"
+    },
+    {
+      "key": "deliveryMethod",
+      "label": "Delivery Method",
+      "type": "string",
+      "required": true,
+      "defaultValue": "email",
+      "description": "How the lead magnet will be delivered",
+      "validation": {
+        "options": ["email", "redirect", "both"]
+      }
+    },
+    {
+      "key": "redirectUrl",
+      "label": "Redirect URL",
+      "type": "string",
+      "required": false,
+      "description": "URL to redirect users to after form submission (if redirect delivery)"
+    },
+    {
+      "key": "followUpEnabled",
+      "label": "Enable Follow-up Sequence",
+      "type": "boolean",
+      "required": false,
+      "defaultValue": true,
+      "description": "Whether to send automated follow-up emails"
+    },
+    {
+      "key": "followUpDays",
+      "label": "Follow-up Days",
+      "type": "array",
+      "required": false,
+      "defaultValue": [1, 3, 7],
+      "description": "Days after signup to send follow-up emails"
+    },
+    {
+      "key": "followUpSubjects",
+      "label": "Follow-up Email Subjects",
+      "type": "array",
+      "required": false,
+      "defaultValue": [
+        "Quick tip to get started",
+        "How are you finding the guide?",
+        "More resources for you"
+      ],
+      "description": "Subject lines for follow-up emails"
+    },
+    {
+      "key": "followUpContent",
+      "label": "Follow-up Email Content",
+      "type": "array",
+      "required": false,
+      "defaultValue": [
+        "Here's a quick tip to help you get the most out of your free guide...",
+        "I hope you're finding the guide helpful! Here are some additional resources...",
+        "Here are some more resources that might help you..."
+      ],
+      "description": "Content for follow-up emails (supports HTML)"
+    },
+    {
+      "key": "defaultTags",
+      "label": "Default Tags",
+      "type": "array",
+      "required": false,
+      "defaultValue": ["lead-magnet", "new-subscriber"],
+      "description": "Tags to automatically apply to new subscribers"
+    },
+    {
+      "key": "segmentConditions",
+      "label": "Segmentation Conditions",
+      "type": "object",
+      "required": false,
+      "description": "Conditions for automatic list segmentation"
+    },
+    {
+      "key": "webhookUrl",
+      "label": "Custom Webhook URL",
+      "type": "string",
+      "required": false,
+      "description": "Custom webhook URL for additional processing"
+    },
+    {
+      "key": "successRedirectUrl",
+      "label": "Success Redirect URL",
+      "type": "string",
+      "required": false,
+      "description": "URL to redirect to after successful form submission"
+    },
+    {
+      "key": "errorRedirectUrl",
+      "label": "Error Redirect URL",
+      "type": "string",
+      "required": false,
+      "description": "URL to redirect to if form submission fails"
+    }
+  ],
+  "n8nWorkflow": {
+    "name": "Lead Magnet Funnel Automation",
+    "nodes": [
+      {
+        "id": "webhook-trigger",
+        "name": "Form Submission Webhook",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [240, 300],
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "lead-magnet",
+          "responseMode": "onReceived",
+          "options": {
+            "rawBody": true
+          }
+        }
+      },
+      {
+        "id": "validate-input",
+        "name": "Validate Form Data",
+        "type": "n8n-nodes-base.set",
+        "typeVersion": 3.3,
+        "position": [460, 300],
+        "parameters": {
+          "values": [
+            {
+              "name": "email",
+              "value": "={{ $json.body.email }}"
+            },
+            {
+              "name": "firstName",
+              "value": "={{ $json.body.firstName || \"\" }}"
+            },
+            {
+              "name": "lastName",
+              "value": "={{ $json.body.lastName || \"\" }}"
+            },
+            {
+              "name": "phone",
+              "value": "={{ $json.body.phone || \"\" }}"
+            },
+            {
+              "name": "formId",
+              "value": "={{ $json.body.formId }}"
+            },
+            {
+              "name": "leadMagnetType",
+              "value": "={{ $json.body.leadMagnetType || \"pdf\" }}"
+            },
+            {
+              "name": "timestamp",
+              "value": "={{ $now }}"
+            },
+            {
+              "name": "ipAddress",
+              "value": "={{ $json.body.ipAddress || \"\" }}"
+            },
+            {
+              "name": "userAgent",
+              "value": "={{ $json.body.userAgent || \"\" }}"
+            }
+          ],
+          "options": {}
+        }
+      },
+      {
+        "id": "validate-email",
+        "name": "Validate Email",
+        "type": "n8n-nodes-base.switch",
+        "typeVersion": 2,
+        "position": [680, 300],
+        "parameters": {
+          "dataType": "string",
+          "value1": "={{ $json.email }}",
+          "rules": {
+            "rules": [
+              {
+                "value2": "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$",
+                "operation": "regexMatch",
+                "output": 0
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "check-duplicate",
+        "name": "Check for Duplicate",
+        "type": "n8n-nodes-base.mailchimp",
+        "typeVersion": 2,
+        "position": [900, 200],
+        "parameters": {
+          "operation": "get",
+          "listId": "{{ $credentials.mailchimpApi.listId }}",
+          "email": "={{ $json.email }}",
+          "options": {}
+        }
+      },
+      {
+        "id": "duplicate-check-switch",
+        "name": "Duplicate Check",
+        "type": "n8n-nodes-base.switch",
+        "typeVersion": 2,
+        "position": [1120, 200],
+        "parameters": {
+          "dataType": "boolean",
+          "value1": "={{ $json.total === 0 }}",
+          "rules": {
+            "rules": [
+              {
+                "value2": true,
+                "operation": "equal",
+                "output": 0
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "add-to-list",
+        "name": "Add to Email List",
+        "type": "n8n-nodes-base.mailchimp",
+        "typeVersion": 2,
+        "position": [1340, 200],
+        "parameters": {
+          "operation": "addOrUpdate",
+          "listId": "{{ $credentials.mailchimpApi.listId }}",
+          "email": "={{ $json.email }}",
+          "mergeFields": {
+            "FNAME": "={{ $json.firstName }}",
+            "LNAME": "={{ $json.lastName }}",
+            "PHONE": "={{ $json.phone }}",
+            "LEAD_MAGNET": "{{ $credentials.leadMagnet.name }}",
+            "SIGNUP_DATE": "={{ $json.timestamp }}",
+            "IP_ADDRESS": "={{ $json.ipAddress }}"
+          },
+          "tags": "{{ $credentials.defaultTags }}",
+          "options": {
+            "doubleOptin": false,
+            "updateExisting": true
+          }
+        }
+      },
+      {
+        "id": "send-welcome-email",
+        "name": "Send Welcome Email",
+        "type": "n8n-nodes-base.sendGrid",
+        "typeVersion": 2,
+        "position": [1560, 200],
+        "parameters": {
+          "operation": "send",
+          "fromEmail": "{{ $credentials.emailService.fromEmail }}",
+          "fromName": "{{ $credentials.emailService.fromName }}",
+          "toEmail": "={{ $json.email }}",
+          "subject": "{{ $credentials.emailService.welcomeEmailSubject }}",
+          "text": "{{ $credentials.emailService.welcomeEmailContent }}",
+          "html": "{{ $credentials.emailService.welcomeEmailContent }}",
+          "options": {}
+        }
+      },
+      {
+        "id": "deliver-lead-magnet",
+        "name": "Deliver Lead Magnet",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [1780, 200],
+        "parameters": {
+          "url": "{{ $credentials.leadMagnet.deliveryUrl }}",
+          "method": "POST",
+          "headers": {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer {{ $credentials.apiKey }}"
+          },
+          "body": {
+            "email": "={{ $json.email }}",
+            "leadMagnetType": "={{ $json.leadMagnetType }}",
+            "leadMagnetName": "{{ $credentials.leadMagnet.name }}",
+            "leadMagnetUrl": "{{ $credentials.leadMagnet.url }}",
+            "firstName": "={{ $json.firstName }}",
+            "lastName": "={{ $json.lastName }}",
+            "timestamp": "={{ $json.timestamp }}",
+            "formId": "={{ $json.formId }}",
+            "ipAddress": "={{ $json.ipAddress }}"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "schedule-followup-check",
+        "name": "Check Follow-up Enabled",
+        "type": "n8n-nodes-base.switch",
+        "typeVersion": 2,
+        "position": [2000, 200],
+        "parameters": {
+          "dataType": "boolean",
+          "value1": "{{ $credentials.followUpEnabled }}",
+          "rules": {
+            "rules": [
+              {
+                "value2": true,
+                "operation": "equal",
+                "output": 0
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "schedule-followup-1",
+        "name": "Schedule Follow-up 1",
+        "type": "n8n-nodes-base.wait",
+        "typeVersion": 1.1,
+        "position": [2220, 200],
+        "parameters": {
+          "amount": 1,
+          "unit": "days"
+        }
+      },
+      {
+        "id": "send-followup-1",
+        "name": "Send Follow-up 1",
+        "type": "n8n-nodes-base.sendGrid",
+        "typeVersion": 2,
+        "position": [2440, 200],
+        "parameters": {
+          "operation": "send",
+          "fromEmail": "{{ $credentials.emailService.fromEmail }}",
+          "fromName": "{{ $credentials.emailService.fromName }}",
+          "toEmail": "={{ $json.email }}",
+          "subject": "{{ $credentials.followUpSubjects[0] }}",
+          "text": "{{ $credentials.followUpContent[0] }}",
+          "html": "{{ $credentials.followUpContent[0] }}",
+          "options": {}
+        }
+      },
+      {
+        "id": "schedule-followup-2",
+        "name": "Schedule Follow-up 2",
+        "type": "n8n-nodes-base.wait",
+        "typeVersion": 1.1,
+        "position": [2660, 200],
+        "parameters": {
+          "amount": 2,
+          "unit": "days"
+        }
+      },
+      {
+        "id": "send-followup-2",
+        "name": "Send Follow-up 2",
+        "type": "n8n-nodes-base.sendGrid",
+        "typeVersion": 2,
+        "position": [2880, 200],
+        "parameters": {
+          "operation": "send",
+          "fromEmail": "{{ $credentials.emailService.fromEmail }}",
+          "fromName": "{{ $credentials.emailService.fromName }}",
+          "toEmail": "={{ $json.email }}",
+          "subject": "{{ $credentials.followUpSubjects[1] }}",
+          "text": "{{ $credentials.followUpContent[1] }}",
+          "html": "{{ $credentials.followUpContent[1] }}",
+          "options": {}
+        }
+      },
+      {
+        "id": "schedule-followup-3",
+        "name": "Schedule Follow-up 3",
+        "type": "n8n-nodes-base.wait",
+        "typeVersion": 1.1,
+        "position": [3100, 200],
+        "parameters": {
+          "amount": 4,
+          "unit": "days"
+        }
+      },
+      {
+        "id": "send-followup-3",
+        "name": "Send Follow-up 3",
+        "type": "n8n-nodes-base.sendGrid",
+        "typeVersion": 2,
+        "position": [3320, 200],
+        "parameters": {
+          "operation": "send",
+          "fromEmail": "{{ $credentials.emailService.fromEmail }}",
+          "fromName": "{{ $credentials.emailService.fromName }}",
+          "toEmail": "={{ $json.email }}",
+          "subject": "{{ $credentials.followUpSubjects[2] }}",
+          "text": "{{ $credentials.followUpContent[2] }}",
+          "html": "{{ $credentials.followUpContent[2] }}",
+          "options": {}
+        }
+      },
+      {
+        "id": "handle-invalid-email",
+        "name": "Handle Invalid Email",
+        "type": "n8n-nodes-base.set",
+        "typeVersion": 3.3,
+        "position": [680, 500],
+        "parameters": {
+          "values": [
+            {
+              "name": "error",
+              "value": "Invalid email address provided"
+            },
+            {
+              "name": "email",
+              "value": "={{ $json.email }}"
+            },
+            {
+              "name": "timestamp",
+              "value": "={{ $now }}"
+            },
+            {
+              "name": "requestId",
+              "value": "={{ $runIndex }}"
+            }
+          ],
+          "options": {}
+        }
+      },
+      {
+        "id": "handle-existing-subscriber",
+        "name": "Handle Existing Subscriber",
+        "type": "n8n-nodes-base.set",
+        "typeVersion": 3.3,
+        "position": [1340, 400],
+        "parameters": {
+          "values": [
+            {
+              "name": "message",
+              "value": "Subscriber already exists in list"
+            },
+            {
+              "name": "email",
+              "value": "={{ $json.email }}"
+            },
+            {
+              "name": "subscriberId",
+              "value": "={{ $json.members[0].id }}"
+            },
+            {
+              "name": "timestamp",
+              "value": "={{ $now }}"
+            }
+          ],
+          "options": {}
+        }
+      },
+      {
+        "id": "log-activity",
+        "name": "Log Activity",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [3540, 200],
+        "parameters": {
+          "url": "{{ $credentials.logging.webhookUrl }}",
+          "method": "POST",
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "event": "lead_magnet_completed",
+            "email": "={{ $json.email }}",
+            "leadMagnetType": "={{ $json.leadMagnetType }}",
+            "timestamp": "={{ $json.timestamp }}",
+            "workflow": "lead-magnet-workflow"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "send-webhook-notification",
+        "name": "Send Webhook Notification",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [3760, 200],
+        "parameters": {
+          "url": "{{ $credentials.webhookUrl }}",
+          "method": "POST",
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "event": "new_lead",
+            "data": {
+              "email": "={{ $json.email }}",
+              "firstName": "={{ $json.firstName }}",
+              "lastName": "={{ $json.lastName }}",
+              "leadMagnetType": "={{ $json.leadMagnetType }}",
+              "timestamp": "={{ $json.timestamp }}",
+              "formId": "={{ $json.formId }}"
+            }
+          },
+          "options": {}
+        }
+      }
+    ],
+    "connections": {
+      "Form Submission Webhook": {
+        "main": [[{ "node": "Validate Form Data", "type": "main", "index": 0 }]]
+      },
+      "Validate Form Data": {
+        "main": [[{ "node": "Validate Email", "type": "main", "index": 0 }]]
+      },
+      "Validate Email": {
+        "main": [
+          [{ "node": "Check for Duplicate", "type": "main", "index": 0 }], // Valid email
+          [{ "node": "Handle Invalid Email", "type": "main", "index": 0 }] // Invalid email
+        ]
+      },
+      "Check for Duplicate": {
+        "main": [[{ "node": "Duplicate Check", "type": "main", "index": 0 }]]
+      },
+      "Duplicate Check": {
+        "main": [
+          [{ "node": "Add to Email List", "type": "main", "index": 0 }], // New subscriber
+          [{ "node": "Handle Existing Subscriber", "type": "main", "index": 0 }] // Existing subscriber
+        ]
+      },
+      "Add to Email List": {
+        "main": [[{ "node": "Send Welcome Email", "type": "main", "index": 0 }]]
+      },
+      "Send Welcome Email": {
+        "main": [[{ "node": "Deliver Lead Magnet", "type": "main", "index": 0 }]]
+      },
+      "Deliver Lead Magnet": {
+        "main": [[{ "node": "Check Follow-up Enabled", "type": "main", "index": 0 }]]
+      },
+      "Check Follow-up Enabled": {
+        "main": [
+          [{ "node": "Schedule Follow-up 1", "type": "main", "index": 0 }], // Follow-up enabled
+          [{ "node": "Log Activity", "type": "main", "index": 0 }] // No follow-up
+        ]
+      },
+      "Schedule Follow-up 1": {
+        "main": [[{ "node": "Send Follow-up 1", "type": "main", "index": 0 }]]
+      },
+      "Send Follow-up 1": {
+        "main": [[{ "node": "Schedule Follow-up 2", "type": "main", "index": 0 }]]
+      },
+      "Schedule Follow-up 2": {
+        "main": [[{ "node": "Send Follow-up 2", "type": "main", "index": 0 }]]
+      },
+      "Send Follow-up 2": {
+        "main": [[{ "node": "Schedule Follow-up 3", "type": "main", "index": 0 }]]
+      },
+      "Schedule Follow-up 3": {
+        "main": [[{ "node": "Send Follow-up 3", "type": "main", "index": 0 }]]
+      },
+      "Send Follow-up 3": {
+        "main": [[{ "node": "Log Activity", "type": "main", "index": 0 }]]
+      },
+      "Log Activity": {
+        "main": [[{ "node": "Send Webhook Notification", "type": "main", "index": 0 }]]
+      }
+    },
+    "active": false,
+    "settings": {
+      "executionOrder": "v1",
+      "saveManualExecutions": true,
+      "callerPolicyDefaultOption": "workflowsFromSameOwner",
+      "errorWorkflow": {
+        "errorWorkflowId": "{{ $credentials.errorHandling.workflowId }}"
+      }
+    },
+    "staticData": {},
+    "pinData": {}
+  },
+  "requirements": {
+    "n8nNodes": [
+      "n8n-nodes-base.webhook",
+      "n8n-nodes-base.set",
+      "n8n-nodes-base.switch",
+      "n8n-nodes-base.mailchimp",
+      "n8n-nodes-base.sendGrid",
+      "n8n-nodes-base.httpRequest",
+      "n8n-nodes-base.wait"
+    ],
+    "credentials": [
+      "mailchimpApi",
+      "sendGridApi"
+    ],
+    "environment": [
+      "N8N_WEBHOOK_URL",
+      "LEAD_MAGNET_BASE_URL"
+    ]
+  },
+  "documentation": {
+    "description": "This workflow template provides a complete lead magnet funnel automation system. It handles form submissions, validates email addresses, checks for duplicates, adds subscribers to your email list, sends welcome emails, delivers lead magnets, and manages follow-up sequences.",
+    "features": [
+      "Webhook-based form submission handling",
+      "Email validation and duplicate checking",
+      "Multi-provider email service integration (Mailchimp, SendGrid, ConvertKit)",
+      "Automated welcome email delivery",
+      "Lead magnet delivery with tracking",
+      "Configurable follow-up email sequences",
+      "Tag-based subscriber segmentation",
+      "Error handling and logging",
+      "Webhook notifications for external systems"
+    ],
+    "setupInstructions": [
+      "Configure your email service provider credentials",
+      "Set up your email list ID",
+      "Customize email content and timing",
+      "Upload your lead magnet files and get delivery URL",
+      "Test the workflow with sample data",
+      "Activate the workflow and connect your forms"
+    ],
+    "customizationTips": [
+      "Modify the follow-up sequence timing and content",
+      "Add additional segmentation rules",
+      "Integrate with CRM systems via webhooks",
+      "Add SMS notifications for high-value leads",
+      "Implement A/B testing for email content"
+    ]
+  },
+  "examples": {
+    "basicConfig": {
+      "emailProvider": "mailchimp",
+      "listId": "abc123",
+      "apiKey": "your-mailchimp-api-key",
+      "fromEmail": "welcome@yourcompany.com",
+      "fromName": "Your Company",
+      "leadMagnetType": "pdf",
+      "leadMagnetUrl": "https://yourcompany.com/free-guide.pdf",
+      "leadMagnetName": "Free Marketing Guide",
+      "welcomeEmailSubject": "Your Free Guide is Ready!",
+      "welcomeEmailContent": "<p>Thank you for subscribing! Here is your free guide.</p><p><a href='{{leadMagnetUrl}}'>Download Now</a></p>",
+      "deliveryMethod": "email",
+      "followUpEnabled": true,
+      "defaultTags": ["lead-magnet", "new-subscriber"]
+    },
+    "advancedConfig": {
+      "emailProvider": "sendgrid",
+      "listId": "xyz789",
+      "apiKey": "your-sendgrid-api-key",
+      "fromEmail": "welcome@yourcompany.com",
+      "fromName": "Sarah from Your Company",
+      "leadMagnetType": "video",
+      "leadMagnetUrl": "https://yourcompany.com/video-course",
+      "leadMagnetName": "5-Day Video Course",
+      "welcomeEmailSubject": "🎥 Your Free Video Course Starts Now!",
+      "welcomeEmailContent": "<h1>Welcome to your free course!</h1><p>Here's your first lesson...</p>",
+      "deliveryMethod": "both",
+      "redirectUrl": "https://yourcompany.com/thank-you",
+      "followUpEnabled": true,
+      "followUpDays": [1, 3, 5, 10],
+      "defaultTags": ["video-course", "beginner"],
+      "segmentConditions": {
+        "interest": "marketing",
+        "experience": "beginner"
+      },
+      "webhookUrl": "https://yourcrm.com/webhook/new-lead"
+    }
+  }
+}

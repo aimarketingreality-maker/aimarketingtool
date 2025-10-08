@@ -1,0 +1,232 @@
+openapi: 3.0.0
+info:
+  title: AI Marketing Tool API
+  version: 1.0.0
+  description: API for managing marketing funnels, pages, and components.
+paths:
+  /api/funnels:
+    get:
+      summary: List funnels
+      responses:
+        '200':
+          description: A list of funnels for the authenticated user.
+    post:
+      summary: Create a funnel
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+      responses:
+        '201':
+          description: Funnel created.
+  /api/funnels/{funnelId}:
+    get:
+      summary: Get a funnel
+      parameters:
+        - name: funnelId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: A single funnel.
+    put:
+      summary: Update a funnel
+      parameters:
+        - name: funnelId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                published:
+                  type: boolean
+      responses:
+        '200':
+          description: Funnel updated.
+    delete:
+      summary: Delete a funnel
+      parameters:
+        - name: funnelId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Funnel deleted.
+  /api/funnels/{funnelId}/pages:
+    get:
+      summary: List pages for a funnel
+      parameters:
+        - name: funnelId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: A list of pages.
+    post:
+      summary: Create a page
+      parameters:
+        - name: funnelId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                slug:
+                  type: string
+      responses:
+        '201':
+          description: Page created.
+  /api/pages/{pageId}:
+    get:
+      summary: Get a page
+      parameters:
+        - name: pageId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: A single page.
+    put:
+      summary: Update a page
+      parameters:
+        - name: pageId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                slug:
+                  type: string
+      responses:
+        '200':
+          description: Page updated.
+    delete:
+      summary: Delete a page
+      parameters:
+        - name: pageId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Page deleted.
+  /api/pages/{pageId}/components:
+    get:
+      summary: List components for a page
+      parameters:
+        - name: pageId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: A list of components.
+    post:
+      summary: Create a component
+      parameters:
+        - name: pageId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                type:
+                  type: string
+                order:
+                  type: integer
+                config:
+                  type: object
+      responses:
+        '201':
+          description: Component created.
+  /api/components/{componentId}:
+    put:
+      summary: Update a component
+      parameters:
+        - name: componentId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                order:
+                  type: integer
+                config:
+                  type: object
+      responses:
+        '200':
+          description: Component updated.
+    delete:
+      summary: Delete a component
+      parameters:
+        - name: componentId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Component deleted.
