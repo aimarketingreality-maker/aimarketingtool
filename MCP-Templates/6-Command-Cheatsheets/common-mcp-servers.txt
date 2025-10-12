@@ -1,0 +1,42 @@
+===========================================
+COMMON MCP SERVERS - COPY-PASTE READY
+===========================================
+
+PLAYWRIGHT (Browser Automation):
+claude mcp add playwright npx @playwright/mcp@latest
+
+STRIPE (Payments):
+claude mcp add --transport http stripe https://mcp.stripe.com
+
+LINEAR (Project Management):
+claude mcp add --transport sse linear https://mcp.linear.app/sse
+
+NETLIFY (Deployment):
+claude mcp add --transport http netlify https://netlify-mcp.netlify.app/mcp
+
+NOTION (Documentation):
+claude mcp add --transport http notion https://mcp.notion.com/mcp
+
+SENTRY (Error Tracking):
+claude mcp add --transport http sentry https://mcp.sentry.dev/mcp
+
+VERCEL (Deployment):
+claude mcp add --transport http vercel https://mcp.vercel.com/
+
+ASANA (Project Management):
+claude mcp add --transport sse asana https://mcp.asana.com/sse
+
+HUBSPOT (CRM):
+claude mcp add --transport http hubspot https://mcp.hubspot.com/anthropic
+
+INTERCOM (Customer Support):
+claude mcp add --transport http intercom https://mcp.intercom.com/mcp
+
+===========================================
+WITH PROJECT SCOPE (Team Sharing):
+===========================================
+
+Add --scope project before server name:
+claude mcp add --scope project playwright npx @playwright/mcp@latest
+
+This creates .mcp.json file you can commit to Git.

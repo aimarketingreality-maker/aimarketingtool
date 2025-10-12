@@ -1,0 +1,35 @@
+===========================================
+MACOS/LINUX COMMANDS FOR MCP SERVERS
+===========================================
+
+CHECK IF CLAUDE CLI EXISTS:
+which claude
+
+ADD MCP SERVER (REMOTE):
+claude mcp add --transport http stripe https://mcp.stripe.com
+
+ADD MCP SERVER (LOCAL):
+claude mcp add playwright npx @playwright/mcp@latest
+
+SET ENVIRONMENT VARIABLE (TEMPORARY):
+export STRIPE_KEY="sk_test_your_key_here"
+
+SET ENVIRONMENT VARIABLE (PERMANENT):
+echo 'export STRIPE_KEY="sk_test_your_key_here"' >> ~/.zshrc
+source ~/.zshrc
+
+CHECK ENVIRONMENT VARIABLE:
+echo $STRIPE_KEY
+
+LOAD FROM .env FILE:
+source .env
+
+CHECK NODE VERSION:
+node --version
+
+VIEW .mcp.json FILE:
+cat .mcp.json
+
+COMMON LOCATIONS:
+User config: ~/.config/claude-code/mcp_config.json
+Project config: ./.mcp.json
