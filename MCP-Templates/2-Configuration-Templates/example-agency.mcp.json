@@ -1,0 +1,22 @@
+{
+  "mcpServers": {
+    "stripe": {
+      "type": "http",
+      "url": "https://mcp.stripe.com",
+      "env": {
+        "STRIPE_KEY": "${CLIENT_STRIPE_KEY}"
+      }
+    },
+    "netlify": {
+      "type": "http",
+      "url": "https://netlify-mcp.netlify.app/mcp",
+      "env": {
+        "NETLIFY_AUTH_TOKEN": "${CLIENT_NETLIFY_TOKEN}"
+      }
+    },
+    "linear": {
+      "type": "sse",
+      "url": "https://mcp.linear.app/sse"
+    }
+  }
+}

@@ -1,0 +1,34 @@
+===========================================
+WINDOWS POWERSHELL COMMANDS FOR MCP SERVERS
+===========================================
+
+CHECK IF CLAUDE CLI EXISTS:
+Get-Command claude
+
+ADD MCP SERVER (REMOTE):
+claude mcp add --transport http stripe https://mcp.stripe.com
+
+ADD MCP SERVER (LOCAL - IMPORTANT: Use cmd /c):
+claude mcp add playwright cmd /c npx @playwright/mcp@latest
+
+SET ENVIRONMENT VARIABLE (TEMPORARY):
+$env:STRIPE_KEY = "sk_test_your_key_here"
+
+CHECK ENVIRONMENT VARIABLE:
+echo $env:STRIPE_KEY
+
+LOAD FROM .env FILE:
+Get-Content .env | ForEach-Object {
+  $name, $value = $_.split('=')
+  Set-Item -Path "env:$name" -Value $value
+}
+
+CHECK NODE VERSION:
+node --version
+
+VIEW .mcp.json FILE:
+type .mcp.json
+
+COMMON ISSUE: "Connection closed"
+SOLUTION: Always use "cmd /c" before npx on Windows:
+claude mcp add myserver cmd /c npx @package/name
